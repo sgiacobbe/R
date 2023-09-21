@@ -1,0 +1,100 @@
+---
+title: 'Assignment 6'
+author: "Sophie Giacobbe"
+date: "3/6/2023"
+output: pdf_document
+---
+```{r, message=FALSE}
+#load in necessary packages
+library(dplyr)
+library(dbplyr)
+library(ggplot2)
+library(maps)
+library(mapproj)
+```
+
+```{r}
+#load in state data
+data(state)
+state_data <- as.data.frame(state.x77) |>
+  mutate(region = tolower(state.name))
+us_states <- map_data("state")
+state_map <- left_join(us_states, state_data, by = "region")
+```
+
+```{r, warning=FALSE}
+#group by state, then show number of days of frost via map
+ggplot(state_map, aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = Frost), color = "grey90", size = 0.3) + 
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) + 
+  scale_fill_gradient2(mid = "lavenderblush3", high = "cornflowerblue") + 
+  theme_void() + 
+  theme(legend.position = "bottom") + 
+  labs(title = "Number of Days of Frost", subtitle = "Grouped by State")
+```
+
+```{r}
+#show counties in Texas
+map('county', 'texas', fill = TRUE, col = c("slateblue1", "orangered", "lightcoral",
+"indianred1", "blue", "darkslateblue", "darkorchid1", "pink", "lightblue2", "cornflowerblue"))
+```
+
+```{r}
+#load in flight data
+flights <- nycflights13::flights
+```
+
+```{r}
+#EDA, biggest carriers?
+ggplot(flights) + 
+  geom_bar(aes(carrier, fill = carrier)) + 
+  labs(title = "Most Popular Airlines in 2013") + 
+  theme_minimal() +
+  coord_polar(start = 0) + 
+  theme(legend.position = "none",
+        axis.title = element_blank())
+```
+
+```{r}
+#cut data set down to 5 major airlines and 1 single day
+major_airlines <- c("B6", "DL", "EV", "UA", "AA")
+
+major_flights_single_day <- flights |>
+  filter(carrier %in% major_airlines) |>
+  filter(month == "9") |>
+  filter(day == "19") |> 
+  mutate(airline = case_when(carrier == "DL" ~ "Delta",
+                             carrier == "AA" ~ "American",
+                             carrier == "B6" ~ "Southwest",
+                             carrier == "UA" ~ "United",
+                             carrier == "EV" ~ "ExpressJet"))
+```
+
+```{r, warning=FALSE, message=FALSE}
+#flight time vs distance on Sept 19
+ggplot(major_flights_single_day) + 
+  geom_smooth(aes(distance, air_time), method = "lm", color = "orangered", se = FALSE) + 
+  geom_point(aes(distance, air_time, color = airline), alpha = 0.4) + 
+  labs(x = "Distance Between Airports (Miles)", 
+       y = "Time Spent in the Air (Minutes)",
+       title = "") + 
+  guides(color = guide_legend(title = "Airline")) + 
+  xlim(0, 2500) + 
+  ylim(0, 400)
+```
+
+```{r}
+#origin airports on Sept 19
+ggplot(major_flights_single_day) + 
+  geom_bar(aes(airline, fill = airline)) + 
+  labs(x = "",
+       y = "Number of Flights",
+       fill = "Airline",
+       title = "Departing Flights on September 19, 2013") + 
+  facet_wrap(~origin) + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+
+
+
